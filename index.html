@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>Tower of Hanoi · adjustable disks (1–5) with rod threading</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(145deg, #2b3a4f 0%, #1d2a38 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      padding: 12px;
+      margin: 0;
+    }
+
+    .game-container {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(4px);
+      border-radius: 48px 48px 32px 32px;
+      padding: 24px 16px 30px 16px;
+      box-shadow: 0 25px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.15);
+      width: 100%;
+      max-width: 950px;
+    }
+
+    .stats-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      background: #253241;
+      padding: 14px 25px;
+      border-radius: 60px;
+      margin-bottom: 20px;
+      color: #eef3f9;
+      box-shadow: inset 0 3px 8px #10161e, 0 8px 12px rgba(0,0,0,0.3);
+      gap: 12px;
+    }
+
+    .move-box {
+      background: #0f1a24;
+      padding: 8px 22px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 1.7rem;
+      letter-spacing: 2px;
+      color: #f5d98f;
+      text-shadow: 0 2px 3px black;
+      box-shadow: inset 0 -2px 3px #3e4f5e;
+    }
+
+    .move-box span {
+      font-size: 1rem;
+      color: #9bb7d4;
+      margin-right: 8px;
+    }
+
+    .min-move-badge {
+      background: #3f5568;
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-size: 1.2rem;
+      font-weight: 400;
+      box-shadow: inset 0 -2px 3px #1f2c38;
+    }
+
+    .disk-selector {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #1f2e3c;
+      padding: 6px 18px;
+      border-radius: 40px;
+    }
+
+    .disk-selector label {
+      font-weight: 500;
+      color: #cfdeed;
+    }
+
+    #diskSlider {
+      width: 130px;
+      accent-color: #f5c542;
+      height: 8px;
+      border-radius: 10px;
+    }
+
+    #diskCountDisplay {
+      background: #0b1a26;
+      padding: 4px 14px;
+      border-radius: 30px;
+      font-weight: bold;
+      color: #ffd966;
+      font-size: 1.2rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      background: #e6eef9;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #1d2b38;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #8899aa, 0 8px 12px black;
+      transition: all 0.1s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(255,255,255,0.5);
+    }
+
+    .btn:active {
+      transform: translateY(6px);
+      box-shadow: 0 2px 0 #6b7c8d, 0 5px 10px black;
+    }
+
+    .btn.reset-btn {
+      background: #ffcf9a;
+      box-shadow: 0 6px 0 #b2854e;
+    }
+
+    .btn.solve-btn {
+      background: #b7d9f4;
+      box-shadow: 0 6px 0 #69809b;
+    }
+
+    /* game board */
+    .board {
+      background: #5d7a9a;
+      background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.2) 10%, transparent 30%);
+      border-radius: 120px 120px 40px 40px;
+      padding: 25px 10px 20px 10px;
+      box-shadow: inset 0 -10px 0 #2e4055, 0 20px 25px #0a121c;
+      border-bottom: 4px solid #c0b9a8;
+    }
+
+    .rods-container {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-end;
+      gap: 8px;
+      min-height: 240px;
+    }
+
+    .rod-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 140px;
+      flex: 1 1 0;
+      position: relative;
+    }
+
+    .rod-label {
+      color: #ffeec2;
+      font-weight: bold;
+      text-shadow: 0 2px 3px black;
+      margin-top: 15px;
+      font-size: 1.2rem;
+      background: #2f4053;
+      padding: 4px 15px;
+      border-radius: 30px;
+      letter-spacing: 1px;
+    }
+
+    .rod {
+      position: relative;
+      width: 18px;
+      height: 200px;
+      background: #a9875a;
+      background: linear-gradient(135deg, #b89b73, #8f6e44);
+      border-radius: 20px 20px 4px 4px;
+      box-shadow: 0 10px 0 #4f3e2b, 0 15px 12px #1e1e1e;
+      margin-bottom: 0px;
+      z-index: 5;
+    }
+
+    /* the base */
+    .base {
+      width: 100%;
+      height: 24px;
+      background: #7c6a51;
+      background: linear-gradient(#b7a07e, #6e5d45);
+      border-radius: 40px;
+      margin-top: -8px;
+      box-shadow: 0 8px 0 #3d3324, 0 10px 15px black;
+      z-index: 10;
+      position: relative;
+    }
+
+    /* disks area – now with a hole effect using a radial gradient overlay to simulate threading */
+    .disks-stack {
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      width: 100%;
+      min-height: 110px;
+      margin-bottom: 5px;
+      z-index: 20;
+      pointer-events: none;
+      position: relative;
+    }
+
+    .disk {
+      height: 26px;
+      border-radius: 40px;
+      margin: 2px 0;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 8px 10px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.5);
+      transition: all 0.2s ease;
+      pointer-events: auto;
+      cursor: grab;
+      /* thread/rod-hole effect: dark center line */
+      background: radial-gradient(circle at 50% 50%, #1e1e1e 3px, transparent 4px), var(--disk-color);
+      background-size: 100%, 100%;
+      background-repeat: no-repeat;
+      background-position: center;
+      position: relative;
+      z-index: 25;
+    }
+
+    .disk:active {
+      cursor: grabbing;
+      opacity: 0.9;
+      transform: scale(1.02);
+    }
+
+    /* dynamic disk colors using css variables */
+    .disk[data-size="1"] { --disk-color: #f9a95d; width: 50px; }
+    .disk[data-size="2"] { --disk-color: #6fc2d6; width: 70px; }
+    .disk[data-size="3"] { --disk-color: #f3c35b; width: 90px; }
+    .disk[data-size="4"] { --disk-color: #b583df; width: 110px; }
+    .disk[data-size="5"] { --disk-color: #e18a8a; width: 130px; }
+
+    .disk {
+      background: radial-gradient(circle at 50% 50%, #2f2f2f 4px, transparent 5px), var(--disk-color);
+    }
+
+    /* drag & drop helper */
+    .disk.dragging {
+      opacity: 0.5;
+      transform: scale(0.98);
+      transition: none;
+    }
+
+    .rod-wrapper.droppable .rod {
+      background: #cfb591;
+      box-shadow: 0 0 0 4px #ffe28a;
+    }
+
+    /* win overlay */
+    .win-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .win-card {
+      background: #f2eee9;
+      padding: 35px 30px;
+      border-radius: 70px;
+      text-align: center;
+      box-shadow: 0 30px 40px black;
+      max-width: 350px;
+      width: 90%;
+      border: 5px solid #ffcf9a;
+    }
+
+    .win-card h2 {
+      font-size: 3rem;
+      color: #2d5f3e;
+      margin-bottom: 15px;
+    }
+
+    .win-card p {
+      font-size: 1.6rem;
+      background: #2b4d5e;
+      color: white;
+      padding: 12px;
+      border-radius: 60px;
+      margin: 20px 0;
+    }
+
+    .win-card .btn {
+      font-size: 1.7rem;
+      padding: 15px 35px;
+      background: #f7c46e;
+    }
+
+    /* mobile fine-tuning */
+    @media (max-width: 600px) {
+      .stats-panel { flex-direction: column; align-items: stretch; }
+      .disk-selector { justify-content: center; }
+      .disk[data-size="1"] { width: 40px; }
+      .disk[data-size="2"] { width: 55px; }
+      .disk[data-size="3"] { width: 70px; }
+      .disk[data-size="4"] { width: 85px; }
+      .disk[data-size="5"] { width: 100px; }
+      .rod { height: 170px; }
+    }
+  </style>
+</head>
+<body>
+<div class="game-container">
+  <!-- header with moves, disk slider, buttons -->
+  <div class="stats-panel">
+    <div class="move-box">
+      <span>⚡</span> <span id="moveCounter">0</span>
+    </div>
+    <div class="min-move-badge" id="minMoveDisplay">
+      🏆 min 7
+    </div>
+    <div class="disk-selector">
+      <label for="diskSlider">💿</label>
+      <input type="range" id="diskSlider" min="1" max="5" value="3" step="1">
+      <span id="diskCountDisplay">3</span>
+    </div>
+    <div class="button-group">
+      <button class="btn reset-btn" id="resetGameBtn">⟲ Reset</button>
+      <button class="btn solve-btn" id="autoSolveBtn">▶ Auto solve</button>
+    </div>
+  </div>
+
+  <!-- main game board -->
+  <div class="board">
+    <div class="rods-container" id="rodsContainer">
+      <!-- rod A (index 0) -->
+      <div class="rod-wrapper" data-rod="0" id="rod-0">
+        <div class="disks-stack" id="stack-0"></div>
+        <div class="rod"></div>
+        <div class="base"></div>
+        <div class="rod-label">A</div>
+      </div>
+      <!-- rod B (index 1) -->
+      <div class="rod-wrapper" data-rod="1" id="rod-1">
+        <div class="disks-stack" id="stack-1"></div>
+        <div class="rod"></div>
+        <div class="base"></div>
+        <div class="rod-label">B</div>
+      </div>
+      <!-- rod C (index 2) -->
+      <div class="rod-wrapper" data-rod="2" id="rod-2">
+        <div class="disks-stack" id="stack-2"></div>
+        <div class="rod"></div>
+        <div class="base"></div>
+        <div class="rod-label">C</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- win popup -->
+<div class="win-overlay" id="winPopup">
+  <div class="win-card">
+    <h2>🏆 WIN!</h2>
+    <p id="winMessage">Total moves: 7</p>
+    <button class="btn reset-btn" id="winRestartBtn">↻ Play again</button>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // DOM elements
+    const moveSpan = document.getElementById('moveCounter');
+    const winPopup = document.getElementById('winPopup');
+    const winMessage = document.getElementById('winMessage');
+    const rodsContainer = document.getElementById('rodsContainer');
+    const stackElements = [
+      document.getElementById('stack-0'),
+      document.getElementById('stack-1'),
+      document.getElementById('stack-2')
+    ];
+    const diskSlider = document.getElementById('diskSlider');
+    const diskCountDisplay = document.getElementById('diskCountDisplay');
+    const minMoveDisplay = document.getElementById('minMoveDisplay');
+
+    // state
+    let rods = [[], [], []];
+    let moves = 0;
+    let gameWon = false;
+    let dragEnabled = true;
+    let autoSolveTimer = null;
+    let currentDiskCount = 3;          // default
+
+    // drag variables
+    let dragSourceRod = null;
+    let selectedRod = null; // for click-to-move
+
+    // minimum moves = 2^n - 1
+    function computeMinMoves(n) {
+      return Math.pow(2, n) - 1;
+    }
+
+    function updateMinDisplay() {
+      minMoveDisplay.innerText = `🏆 min ${computeMinMoves(currentDiskCount)}`;
+    }
+
+    // reset with specific disk count
+    function resetGameWithCount(diskCount) {
+      // kill auto solve
+      if (autoSolveTimer) {
+        clearInterval(autoSolveTimer);
+        autoSolveTimer = null;
+      }
+      dragEnabled = true;
+      gameWon = false;
+      moves = 0;
+      moveSpan.innerText = '0';
+      // create rods: all disks on rod 0, from large (bottom) to small (top)
+      rods = [ [], [], [] ];
+      for (let i = diskCount; i >= 1; i--) {
+        rods[0].push(i);
+      }
+      selectedRod = null;
+      document.querySelectorAll('.rod-wrapper').forEach(w => w.style.outline = 'none');
+      renderGame();
+      winPopup.style.display = 'none';
+      currentDiskCount = diskCount;
+      diskCountDisplay.innerText = diskCount;
+      updateMinDisplay();
+    }
+
+    // render disks from rods with hole effect
+    function renderGame() {
+      stackElements.forEach(stack => stack.innerHTML = '');
+
+      for (let r = 0; r < rods.length; r++) {
+        const rodArray = rods[r];
+        const stackDiv = stackElements[r];
+        for (let i = 0; i < rodArray.length; i++) {
+          const diskSize = rodArray[i]; // 1..5
+          const diskDiv = document.createElement('div');
+          diskDiv.className = `disk`;
+          diskDiv.setAttribute('draggable', 'true');
+          diskDiv.setAttribute('data-size', diskSize);
+          diskDiv.setAttribute('data-rod', r);
+          // disk style uses data-size selector in css
+          diskDiv.setAttribute('data-size', diskSize);
+          // drag events
+          diskDiv.addEventListener('dragstart', handleDragStart);
+          diskDiv.addEventListener('dragend', handleDragEnd);
+          diskDiv.addEventListener('dragover', (e) => e.preventDefault());
+          diskDiv.addEventListener('click', handleClickMove);
+          stackDiv.appendChild(diskDiv);
+        }
+      }
+    }
+
+    // validation
+    function isValidMove(fromIdx, toIdx) {
+      if (fromIdx === toIdx) return false;
+      const fromRod = rods[fromIdx];
+      const toRod = rods[toIdx];
+      if (fromRod.length === 0) return false;
+      const diskToMove = fromRod[fromRod.length - 1];
+      if (toRod.length === 0) return true;
+      const topTarget = toRod[toRod.length - 1];
+      return diskToMove < topTarget;
+    }
+
+    // perform move (low level)
+    function performMove(fromIdx, toIdx, updateCounter = true) {
+      if (gameWon || !dragEnabled) return false;
+      if (!isValidMove(fromIdx, toIdx)) return false;
+
+      const disk = rods[fromIdx].pop();
+      rods[toIdx].push(disk);
+      if (updateCounter) {
+        moves++;
+        moveSpan.innerText = moves;
+      }
+      renderGame();
+
+      // win condition: all disks on rod 2
+      if (rods[2].length === currentDiskCount && !gameWon) {
+        gameWon = true;
+        winMessage.innerText = `Total moves: ${moves} (min ${computeMinMoves(currentDiskCount)})`;
+        winPopup.style.display = 'flex';
+      }
+      return true;
+    }
+
+    // drag handlers
+    function handleDragStart(e) {
+      if (!dragEnabled || gameWon) {
+        e.preventDefault();
+        return false;
+      }
+      const disk = e.target;
+      const rodAttr = disk.getAttribute('data-rod');
+      if (!rodAttr) return;
+      const rodIdx = parseInt(rodAttr, 10);
+      const disksInRod = rods[rodIdx];
+      if (disksInRod.length === 0) return;
+      const topDisk = disksInRod[disksInRod.length - 1];
+      const diskSize = parseInt(disk.getAttribute('data-size'), 10);
+      if (topDisk !== diskSize) {
+        e.preventDefault();
+        return false;
+      }
+
+      dragSourceRod = rodIdx;
+      e.dataTransfer.setData('text/plain', `${rodIdx}`);
+      e.dataTransfer.effectAllowed = 'move';
+      disk.classList.add('dragging');
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+      document.querySelectorAll('.rod-wrapper').forEach(w => w.classList.remove('droppable'));
+      dragSourceRod = null;
+    }
+
+    // dragover/drop on rod wrappers
+    rodsContainer.querySelectorAll('.rod-wrapper').forEach(wrapper => {
+      wrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragEnabled && !gameWon) wrapper.classList.add('droppable');
+      });
+      wrapper.addEventListener('dragleave', () => {
+        wrapper.classList.remove('droppable');
+      });
+
+      wrapper.addEventListener('drop', (e) => {
+        e.preventDefault();
+        wrapper.classList.remove('droppable');
+        if (!dragEnabled || gameWon || dragSourceRod === null) return;
+        const targetRod = parseInt(wrapper.getAttribute('data-rod'), 10);
+        if (isValidMove(dragSourceRod, targetRod)) {
+          performMove(dragSourceRod, targetRod, true);
+        }
+        dragSourceRod = null;
+      });
+    });
+
+    // click-to-move (mobile)
+    function handleClickMove(e) {
+      e.stopPropagation();
+      if (!dragEnabled || gameWon) return;
+
+      const disk = e.currentTarget;
+      const rodIdx = parseInt(disk.getAttribute('data-rod'), 10);
+      const diskSize = parseInt(disk.getAttribute('data-size'), 10);
+      const topDisk = rods[rodIdx][rods[rodIdx].length - 1];
+      if (topDisk !== diskSize) return; // not top
+
+      if (selectedRod === null) {
+        selectedRod = rodIdx;
+        document.querySelectorAll('.rod-wrapper').forEach(w => w.style.outline = 'none');
+        document.querySelector(`[data-rod="${rodIdx}"]`).style.outline = '3px solid gold';
+      } else {
+        const fromRod = selectedRod;
+        const toRod = rodIdx;
+        document.querySelectorAll('.rod-wrapper').forEach(w => w.style.outline = 'none');
+        if (isValidMove(fromRod, toRod)) {
+          performMove(fromRod, toRod, true);
+        }
+        selectedRod = null;
+      }
+    }
+
+    // auto solve (optimal moves)
+    function startAutoSolve() {
+      if (gameWon) resetGameWithCount(currentDiskCount);
+      if (autoSolveTimer) {
+        clearInterval(autoSolveTimer);
+        autoSolveTimer = null;
+      }
+      dragEnabled = false;
+      
+      // generate optimal move sequence for current disk count from rod 0 to rod 2
+      function hanoiMoves(n, from, to, via, movesArray) {
+        if (n === 1) {
+          movesArray.push([from, to]);
+        } else {
+          hanoiMoves(n - 1, from, via, to, movesArray);
+          movesArray.push([from, to]);
+          hanoiMoves(n - 1, via, to, from, movesArray);
+        }
+      }
+      let moveSeq = [];
+      hanoiMoves(currentDiskCount, 0, 2, 1, moveSeq);
+
+      // reset rods
+      rods = [[], [], []];
+      for (let i = currentDiskCount; i >= 1; i--) rods[0].push(i);
+      moves = 0;
+      moveSpan.innerText = '0';
+      renderGame();
+      gameWon = false;
+      winPopup.style.display = 'none';
+
+      let step = 0;
+      autoSolveTimer = setInterval(() => {
+        if (step >= moveSeq.length) {
+          clearInterval(autoSolveTimer);
+          autoSolveTimer = null;
+          dragEnabled = true;
+          return;
+        }
+        const [from, to] = moveSeq[step];
+        if (isValidMove(from, to)) {
+          const disk = rods[from].pop();
+          rods[to].push(disk);
+          moves++;
+          moveSpan.innerText = moves;
+          renderGame();
+        } else {
+          // emergency stop
+          clearInterval(autoSolveTimer);
+          autoSolveTimer = null;
+          dragEnabled = true;
+          return;
+        }
+        if (step === moveSeq.length - 1) {
+          gameWon = true;
+          winMessage.innerText = `Total moves: ${moves} (min ${computeMinMoves(currentDiskCount)})`;
+          winPopup.style.display = 'flex';
+          dragEnabled = true;
+        }
+        step++;
+      }, 500);
+    }
+
+    // event listeners
+    document.getElementById('resetGameBtn').addEventListener('click', () => {
+      if (autoSolveTimer) {
+        clearInterval(autoSolveTimer);
+        autoSolveTimer = null;
+      }
+      resetGameWithCount(currentDiskCount);
+    });
+
+    document.getElementById('autoSolveBtn').addEventListener('click', () => {
+      if (autoSolveTimer) {
+        clearInterval(autoSolveTimer);
+        autoSolveTimer = null;
+      }
+      startAutoSolve();
+    });
+
+    document.getElementById('winRestartBtn').addEventListener('click', () => {
+      winPopup.style.display = 'none';
+      resetGameWithCount(currentDiskCount);
+    });
+
+    diskSlider.addEventListener('input', (e) => {
+      const newCount = parseInt(e.target.value, 10);
+      diskCountDisplay.innerText = newCount;
+      if (autoSolveTimer) {
+        clearInterval(autoSolveTimer);
+        autoSolveTimer = null;
+      }
+      resetGameWithCount(newCount);
+    });
+
+    // prevent default drag
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
+
+    // initial reset
+    resetGameWithCount(3);
+  })();
+</script>
+
+<!-- brief explanation -->
+<div style="text-align: center; margin-top: 12px; color: #ccdbe9; font-size: 0.8rem; opacity: 0.7;">
+  ⚡ Disks have a "hole" to slide onto rod · drag or click (select, then target) · slider changes disk count
+</div>
+</body>
+</html>
